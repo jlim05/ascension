@@ -29,7 +29,7 @@ It's built as a full-stack app: a **.NET 10 / EF Core / PostgreSQL** API and a
 
 Ascension is built around the gamification loop from *Solo Leveling*, applying HCI
 principles to keep training motivating:
-
+g
 - **Points & progression** — XP, Levels, and the E→D→C→B→A→S Hunter Rank ladder.
 - **Quests** — goal-driven **Daily Quests** plus a harder **Weekly Gate**.
 - **Streaks** — a 5-day streak unlocks an **XP boost** multiplier.
