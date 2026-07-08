@@ -1,6 +1,35 @@
-@Ascension.Api_HostAddress = http://localhost:5202
+@baseUrl = http://localhost:5202
 
-GET {{Ascension.Api_HostAddress}}/weatherforecast/
-Accept: application/json
+### Register
+POST {{baseUrl}}/api/auth/register
+Content-Type: application/json
 
-###
+{
+  "username": "TestHunter2",
+  "email": "test2@ascension.com",
+  "password": "hunter123",
+  "focus": "Bulking",
+  "daysPerWeek": 4,
+  "equipment": "full gym"
+}
+
+### Login
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "username": "TestHunter2",
+  "password": "hunter123"
+}
+
+### Get Today's Quest
+GET {{baseUrl}}/api/quests/today
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJiYTRlMWViYy1iZjM5LTQ4MGQtYTc4OC1iOWI5MWFhNWU1MDMiLCJ1bmlxdWVfbmFtZSI6IlRlc3RIdW50ZXIyIiwianRpIjoiYjRjMmZmMGYtMmY5OS00MzQyLWEwZGMtMzhkN2Y0OGFlNDhlIiwiZXhwIjoxNzg0MTEzNjkxLCJpc3MiOiJBc2NlbnNpb24iLCJhdWQiOiJBc2NlbnNpb25Vc2VycyJ9.NTxzCARXRKOUcFaBcnhPVUf69BAqvhg6MwiplYwUQVQ
+
+### Get Weekly Gate
+GET {{baseUrl}}/api/quests/weekly-gate
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJiYTRlMWViYy1iZjM5LTQ4MGQtYTc4OC1iOWI5MWFhNWU1MDMiLCJ1bmlxdWVfbmFtZSI6IlRlc3RIdW50ZXIyIiwianRpIjoiYjRjMmZmMGYtMmY5OS00MzQyLWEwZGMtMzhkN2Y0OGFlNDhlIiwiZXhwIjoxNzg0MTEzNjkxLCJpc3MiOiJBc2NlbnNpb24iLCJhdWQiOiJBc2NlbnNpb25Vc2VycyJ9.NTxzCARXRKOUcFaBcnhPVUf69BAqvhg6MwiplYwUQVQ
+
+### Complete Quest
+POST {{baseUrl}}/api/quests/0dc5d53d-ac61-4cc8-95ff-5cd3bb88a609/complete
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJiYTRlMWViYy1iZjM5LTQ4MGQtYTc4OC1iOWI5MWFhNWU1MDMiLCJ1bmlxdWVfbmFtZSI6IlRlc3RIdW50ZXIyIiwianRpIjoiYjRjMmZmMGYtMmY5OS00MzQyLWEwZGMtMzhkN2Y0OGFlNDhlIiwiZXhwIjoxNzg0MTEzNjkxLCJpc3MiOiJBc2NlbnNpb24iLCJhdWQiOiJBc2NlbnNpb25Vc2VycyJ9.NTxzCARXRKOUcFaBcnhPVUf69BAqvhg6MwiplYwUQVQ
