@@ -56,34 +56,105 @@ public class QuestService
         return quest;
     }
     public async Task CompleteQuestAsync(Guid questId, string playerId)
-{
-    var quest = await _context.Quests.FindAsync(questId);
-    if (quest == null || quest.PlayerId != playerId) return;
 
-    quest.Status = "Completed";
+    {
+        var quest = await _context.Quests.FindAsync(questId);
+        if (quest == null || quest.PlayerId != playerId) return;
 
-    var player = await _context.Users
-        .Include(p => p.StatBlock)
-        .FirstOrDefaultAsync(p => p.Id == playerId);
+        quest.Status = "Completed";
 
-    if (player == null) return;
+        var player = await _context.Users
+            .Include(p => p.StatBlock)
+            .FirstOrDefaultAsync(p => p.Id == playerId);
 
-    // Award XP — apply 1.5x boost if streak is at 5
-    var xpBoost = player.CurrentStreak >= 5 ? 1.5 : 1.0;
-    player.CurrentXP += (int)(quest.XPReward * xpBoost);
+        if (player == null) return;
 
-    // Increase streak
-    player.CurrentStreak += 1;
+        // Award XP — apply 1.5x boost if streak is at 5
+        var xpBoost = player.CurrentStreak >= 5 ? 1.5 : 1.0;
+        player.CurrentXP += (int)(quest.XPReward * xpBoost);
 
-    // Award stat points based on quest type
-    if (player.StatBlock != null)
-        ApplyStatReward(player.StatBlock, quest.Type, quest.StatReward);
+        // Increase streak
+        player.CurrentStreak += 1;
 
-    // Check if player levels up (100 XP per level)
-    CheckLevelUp(player);
+        // Award stat points based on quest type
+        if (player.StatBlock != null)
+            ApplyStatReward(player.StatBlock, quest.Type, quest.StatReward);
 
-    await _context.SaveChangesAsync();
-}
+        // Award Day-Off Token for completing a Weekly Gate
+        if (quest.IsWeeklyGate)
+            player.DayOffTokens += 1;
+
+
+        // Check if player levels up (100 XP per level)
+        CheckLevelUp(player);
+
+        await _context.SaveChangesAsync();
+    }
+
+    public async Task<Quest?> GetOrGenerateWeeklyGateAsync(string playerId, DateTime weekDate)
+    {
+        // Only generate on Mondays
+        if (weekDate.DayOfWeek != DayOfWeek.Monday)
+            return null;
+
+        // Check if a Weekly Gate already exists for this week
+        var existingGate = await _context.Quests
+            .FirstOrDefaultAsync(q => q.PlayerId == playerId
+                && q.IsWeeklyGate
+                && q.AssignedDate.Date == weekDate.Date);
+
+        if (existingGate != null)
+            return existingGate;
+
+        // Load focus to theme the gate quest
+        var goal = await _context.Goals
+            .FirstOrDefaultAsync(g => g.PlayerId == playerId);
+
+        var focus = goal?.Focus ?? FocusType.Bulking;
+
+        var gateQuest = GenerateWeeklyGate(playerId, focus, weekDate);
+
+        _context.Quests.Add(gateQuest);
+        await _context.SaveChangesAsync();
+
+        return gateQuest;
+    }
+
+    private Quest GenerateWeeklyGate(string playerId, string focus, DateTime date)
+    {
+        var (description, type, xpReward, statReward) = focus switch
+        {
+            FocusType.Bulking =>
+                ("⚔️ WEEKLY GATE: Hit a new PR on your main lift this week. " +
+                "Log 5 sessions of progressive overload.", "STR", 300, 8),
+            FocusType.Cutting =>
+                ("⚔️ WEEKLY GATE: Complete 5 cardio sessions this week. " +
+                "At least 2 must be HIIT.", "AGI", 280, 7),
+            FocusType.Maintain =>
+                ("⚔️ WEEKLY GATE: Train every scheduled day this week " +
+                "without missing a single session.", "VIT", 250, 6),
+            FocusType.MainGain =>
+                ("⚔️ WEEKLY GATE: 5 strength sessions + 3 cardio sessions " +
+                "this week. No exceptions.", "STR", 350, 10),
+            _ =>
+                ("⚔️ WEEKLY GATE: Complete all daily quests this week " +
+                "without a single failure.", "VIT", 250, 6)
+        };
+
+        return new Quest
+        {
+            Id = Guid.NewGuid(),
+            PlayerId = playerId,
+            Description = description,
+            Type = type,
+            XPReward = xpReward,
+            StatReward = statReward,
+            Status = "Pending",
+            AssignedDate = date,
+            DueDate = date.AddDays(7),
+            IsWeeklyGate = true
+        };
+    }
 
     private async Task ApplyPenaltyAsync(Quest quest, Player player)
     {

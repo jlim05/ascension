@@ -217,5 +217,30 @@ public class QuestServiceTests
         Assert.Equal("Failed", updatedQuest!.Status);
         Assert.True(updatedStats.STR < 10); // stat was deducted
     }
+
+    [Fact]
+    public async Task GenerateWeeklyGate_OnMonday_CreatesGateQuest()
+    {
+        // Arrange
+        var db = CreateDb();
+        var player = CreateTestPlayer();
+        db.Users.Add(player);
+        await db.SaveChangesAsync();
+
+        var service = new QuestService(db);
+
+        // Find the next Monday from today (or use today if it's Monday)
+        var today = DateTime.UtcNow.Date;
+        var daysUntilMonday = ((int)DayOfWeek.Monday - (int)today.DayOfWeek + 7) % 7;
+        var monday = today.AddDays(daysUntilMonday == 0 ? 0 : daysUntilMonday);
+
+        // Act
+        var gateQuest = await service.GetOrGenerateWeeklyGateAsync(player.Id, monday);
+
+        // Assert
+        Assert.NotNull(gateQuest);
+        Assert.True(gateQuest.IsWeeklyGate);
+        Assert.True(gateQuest.XPReward > 150); // gate gives more XP than daily
+    }
 }
 
