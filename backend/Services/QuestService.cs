@@ -25,6 +25,22 @@ public class QuestService
         if (existingQuest != null)
             return existingQuest;
 
+        // Check if yesterday's quest was missed — apply penalty if so
+        var yesterday = today.AddDays(-1);
+        var missedQuest = await _context.Quests
+            .FirstOrDefaultAsync(q => q.PlayerId == playerId
+                && q.AssignedDate.Date == yesterday
+                && q.Status == "Pending"
+                && !q.IsWeeklyGate);
+
+        if (missedQuest != null)
+        {
+            var player = await _context.Users
+                .FirstOrDefaultAsync(p => p.Id == playerId);
+            if (player != null)
+                await ApplyPenaltyAsync(missedQuest, player);
+        }
+
         // Load the player's goal so we know their focus
         var goal = await _context.Goals
             .FirstOrDefaultAsync(g => g.PlayerId == playerId);
@@ -38,6 +54,82 @@ public class QuestService
         await _context.SaveChangesAsync();
 
         return quest;
+    }
+    public async Task CompleteQuestAsync(Guid questId, string playerId)
+{
+    var quest = await _context.Quests.FindAsync(questId);
+    if (quest == null || quest.PlayerId != playerId) return;
+
+    quest.Status = "Completed";
+
+    var player = await _context.Users
+        .Include(p => p.StatBlock)
+        .FirstOrDefaultAsync(p => p.Id == playerId);
+
+    if (player == null) return;
+
+    // Award XP — apply 1.5x boost if streak is at 5
+    var xpBoost = player.CurrentStreak >= 5 ? 1.5 : 1.0;
+    player.CurrentXP += (int)(quest.XPReward * xpBoost);
+
+    // Increase streak
+    player.CurrentStreak += 1;
+
+    // Award stat points based on quest type
+    if (player.StatBlock != null)
+        ApplyStatReward(player.StatBlock, quest.Type, quest.StatReward);
+
+    // Check if player levels up (100 XP per level)
+    CheckLevelUp(player);
+
+    await _context.SaveChangesAsync();
+}
+
+    private async Task ApplyPenaltyAsync(Quest quest, Player player)
+    {
+        quest.Status = "Failed";
+        player.CurrentStreak = 0;
+
+        // Load stat block and deduct points — never go below 1
+        var statBlock = await _context.StatBlocks
+            .FirstOrDefaultAsync(s => s.PlayerId == player.Id);
+
+        if (statBlock != null)
+        {
+            statBlock.STR = Math.Max(1, statBlock.STR - 2);
+            statBlock.AGI = Math.Max(1, statBlock.AGI - 1);
+            statBlock.VIT = Math.Max(1, statBlock.VIT - 1);
+        }
+    }
+
+    private static void ApplyStatReward(StatBlock statBlock, string type, int amount)
+    {
+        switch (type)
+        {
+            case "STR": statBlock.STR += amount; break;
+            case "AGI": statBlock.AGI += amount; break;
+            case "VIT": statBlock.VIT += amount; break;
+            case "INT": statBlock.INT += amount; break;
+        }
+    }
+
+    private static void CheckLevelUp(Player player)
+    {
+        // Every 100 XP = 1 level. Rank gates every 10 levels.
+        var newLevel = (player.CurrentXP / 100) + 1;
+        if (newLevel > player.Level)
+        {
+            player.Level = newLevel;
+            player.Rank = player.Level switch
+            {
+                < 10 => "E",
+                < 20 => "D",
+                < 30 => "C",
+                < 40 => "B",
+                < 50 => "A",
+                _ => "S"
+            };
+        }
     }
 
     private Quest GenerateQuest(string playerId, string focus, DateTime date)

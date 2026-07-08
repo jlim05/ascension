@@ -53,82 +53,169 @@ public class QuestServiceTests
     }
 
     [Fact]
-public async Task GetOrGenerateTodaysQuest_WhenQuestAlreadyExists_ReturnsSameQuest()
-{
-    // Arrange
-    var db = CreateDb();
-    var player = CreateTestPlayer();
-    db.Users.Add(player);
-
-    // Manually insert a quest for today
-    var existingQuest = new Quest
+    public async Task GetOrGenerateTodaysQuest_WhenQuestAlreadyExists_ReturnsSameQuest()
     {
-        Id = Guid.NewGuid(),
-        PlayerId = player.Id,
-        Description = "Existing quest",
-        Type = "STR",
-        Status = "Pending",
-        XPReward = 100,
-        StatReward = 3,
-        AssignedDate = DateTime.UtcNow.Date,
-        DueDate = DateTime.UtcNow.Date.AddDays(1),
-        IsWeeklyGate = false
-    };
-    db.Quests.Add(existingQuest);
-    await db.SaveChangesAsync();
+        // Arrange
+        var db = CreateDb();
+        var player = CreateTestPlayer();
+        db.Users.Add(player);
 
-    var service = new QuestService(db);
+        // Manually insert a quest for today
+        var existingQuest = new Quest
+        {
+            Id = Guid.NewGuid(),
+            PlayerId = player.Id,
+            Description = "Existing quest",
+            Type = "STR",
+            Status = "Pending",
+            XPReward = 100,
+            StatReward = 3,
+            AssignedDate = DateTime.UtcNow.Date,
+            DueDate = DateTime.UtcNow.Date.AddDays(1),
+            IsWeeklyGate = false
+        };
+        db.Quests.Add(existingQuest);
+        await db.SaveChangesAsync();
 
-    // Act
-    var quest = await service.GetOrGenerateTodaysQuestAsync(player.Id);
+        var service = new QuestService(db);
 
-    // Assert — should return the existing one, not create a new one
-    Assert.Equal(existingQuest.Id, quest.Id);
-    Assert.Single(db.Quests); // still only one quest in the database
-}
+        // Act
+        var quest = await service.GetOrGenerateTodaysQuestAsync(player.Id);
+
+        // Assert — should return the existing one, not create a new one
+        Assert.Equal(existingQuest.Id, quest.Id);
+        Assert.Single(db.Quests); // still only one quest in the database
+    }
+
+    [Fact]
+    public async Task GenerateQuest_ForMainGain_GivesHigherXPThanOtherFocuses()
+    {
+        // Arrange
+        var db1 = CreateDb();
+        var db2 = CreateDb();
+
+        var bulkingPlayer = CreateTestPlayer(FocusType.Bulking);
+        var mainGainPlayer = CreateTestPlayer(FocusType.MainGain);
+
+        db1.Users.Add(bulkingPlayer);
+        db2.Users.Add(mainGainPlayer);
+        await db1.SaveChangesAsync();
+        await db2.SaveChangesAsync();
+
+        var bulkingService = new QuestService(db1);
+        var mainGainService = new QuestService(db2);
+
+        // Act
+        var bulkingQuest = await bulkingService.GetOrGenerateTodaysQuestAsync(bulkingPlayer.Id);
+        var mainGainQuest = await mainGainService.GetOrGenerateTodaysQuestAsync(mainGainPlayer.Id);
+
+        // Assert — MainGain should always reward more XP
+        Assert.True(mainGainQuest.XPReward > bulkingQuest.XPReward);
+    }
+
+    [Fact]
+    public async Task GenerateQuest_ForCutting_TypeIsAGIOrVIT()
+    {
+        // Arrange
+        var db = CreateDb();
+        var player = CreateTestPlayer(FocusType.Cutting);
+        db.Users.Add(player);
+        await db.SaveChangesAsync();
+
+        var service = new QuestService(db);
+
+        // Act
+        var quest = await service.GetOrGenerateTodaysQuestAsync(player.Id);
+
+        // Assert — cutting quests should train AGI or VIT, not STR
+        Assert.Contains(quest.Type, new[] { "AGI", "VIT" });
+    }
 
 [Fact]
-public async Task GenerateQuest_ForMainGain_GivesHigherXPThanOtherFocuses()
-{
-    // Arrange
-    var db1 = CreateDb();
-    var db2 = CreateDb();
+    public async Task CompleteQuest_IncreasesStreakAndAwardsXP()
+    {
+        // Arrange
+        var db = CreateDb();
+        var player = CreateTestPlayer();
+        player.CurrentStreak = 0;
+        player.CurrentXP = 0;
+        db.Users.Add(player);
 
-    var bulkingPlayer = CreateTestPlayer(FocusType.Bulking);
-    var mainGainPlayer = CreateTestPlayer(FocusType.MainGain);
+        var quest = new Quest
+        {
+            Id = Guid.NewGuid(),
+            PlayerId = player.Id,
+            Description = "Test quest",
+            Type = "STR",
+            Status = "Pending",
+            XPReward = 100,
+            StatReward = 3,
+            AssignedDate = DateTime.UtcNow.Date,
+            DueDate = DateTime.UtcNow.Date.AddDays(1),
+            IsWeeklyGate = false
+        };
+        db.Quests.Add(quest);
+        await db.SaveChangesAsync();
 
-    db1.Users.Add(bulkingPlayer);
-    db2.Users.Add(mainGainPlayer);
-    await db1.SaveChangesAsync();
-    await db2.SaveChangesAsync();
+        var service = new QuestService(db);
 
-    var bulkingService = new QuestService(db1);
-    var mainGainService = new QuestService(db2);
+        // Act
+        await service.CompleteQuestAsync(quest.Id, player.Id);
 
-    // Act
-    var bulkingQuest = await bulkingService.GetOrGenerateTodaysQuestAsync(bulkingPlayer.Id);
-    var mainGainQuest = await mainGainService.GetOrGenerateTodaysQuestAsync(mainGainPlayer.Id);
+        // Assert
+        var updatedPlayer = await db.Users.FindAsync(player.Id);
+        Assert.Equal(1, updatedPlayer!.CurrentStreak);
+        Assert.Equal(100, updatedPlayer.CurrentXP);
+    }
 
-    // Assert — MainGain should always reward more XP
-    Assert.True(mainGainQuest.XPReward > bulkingQuest.XPReward);
-}
+    [Fact]
+    public async Task FailedQuest_ResetsStreakAndDeductsStats()
+    {
+        // Arrange
+        var db = CreateDb();
+        var player = CreateTestPlayer();
+        player.CurrentStreak = 3;
+        db.Users.Add(player);
 
-[Fact]
-public async Task GenerateQuest_ForCutting_TypeIsAGIOrVIT()
-{
-    // Arrange
-    var db = CreateDb();
-    var player = CreateTestPlayer(FocusType.Cutting);
-    db.Users.Add(player);
-    await db.SaveChangesAsync();
+        var statBlock = new StatBlock
+        {
+            PlayerId = player.Id,
+            STR = 10,
+            AGI = 10,
+            VIT = 10,
+            INT = 10
+        };
+        db.StatBlocks.Add(statBlock);
 
-    var service = new QuestService(db);
+        var yesterdayQuest = new Quest
+        {
+            Id = Guid.NewGuid(),
+            PlayerId = player.Id,
+            Description = "Yesterday's quest",
+            Type = "STR",
+            Status = "Pending",
+            XPReward = 100,
+            StatReward = 3,
+            AssignedDate = DateTime.UtcNow.Date.AddDays(-1),
+            DueDate = DateTime.UtcNow.Date,
+            IsWeeklyGate = false
+        };
+        db.Quests.Add(yesterdayQuest);
+        await db.SaveChangesAsync();
 
-    // Act
-    var quest = await service.GetOrGenerateTodaysQuestAsync(player.Id);
+        var service = new QuestService(db);
 
-    // Assert — cutting quests should train AGI or VIT, not STR
-    Assert.Contains(quest.Type, new[] { "AGI", "VIT" });
-}
+        // Act — getting today's quest should trigger the penalty check
+        await service.GetOrGenerateTodaysQuestAsync(player.Id);
+
+        // Assert
+        var updatedPlayer = await db.Users.FindAsync(player.Id);
+        var updatedQuest = await db.Quests.FindAsync(yesterdayQuest.Id);
+        var updatedStats = await db.StatBlocks.FirstAsync(s => s.PlayerId == player.Id);
+
+        Assert.Equal(0, updatedPlayer!.CurrentStreak);
+        Assert.Equal("Failed", updatedQuest!.Status);
+        Assert.True(updatedStats.STR < 10); // stat was deducted
+    }
 }
 
