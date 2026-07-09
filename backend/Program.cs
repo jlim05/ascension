@@ -29,6 +29,22 @@ builder.Services.AddIdentity<Player, IdentityRole>(options =>
 .AddEntityFrameworkStores<AscensionDbContext>()
 .AddDefaultTokenProviders();
 
+// ── CORS ──────────────────────────────────────────────────
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AscensionPolicy", policy =>
+    {
+        policy
+            .WithOrigins(
+                "http://localhost:5173",
+                "https://your-azure-static-app.azurestaticapps.net"
+            )
+            .AllowAnyHeader()
+            .AllowAnyMethod()
+            .AllowCredentials();
+    });
+});
+
 // ── JWT Authentication ────────────────────────────────────
 // Pulls the JWT settings from user-secrets
 var jwtSecret = builder.Configuration["JwtSettings:Secret"]!;
@@ -73,12 +89,10 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
     app.MapScalarApiReference();
 }
-
 app.UseHttpsRedirection();
-
+app.UseCors("AscensionPolicy");
 app.UseAuthentication();
 app.UseAuthorization();
-
 app.MapControllers();
 
 app.Run();
