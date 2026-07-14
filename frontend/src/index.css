@@ -1,1 +1,314 @@
 @import "tailwindcss";
+
+@import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=JetBrains+Mono:wght@400;500;700&family=Geist:wght@400;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&display=swap');
+
+:root {
+  /* ── Surface colors ── */
+  --surface: #111318;
+  --surface-dim: #111318;
+  --surface-bright: #37393e;
+  --surface-container-lowest: #0c0e12;
+  --surface-container-low: #1a1c20;
+  --surface-container: #1e2024;
+  --surface-container-high: #282a2e;
+  --surface-container-highest: #333539;
+
+  /* ── Text colors ── */
+  --on-surface: #e2e2e8;
+  --on-surface-variant: #b9cacb;
+  --outline: #849495;
+  --outline-variant: #3a494b;
+
+  /* ── Primary (Electric Cyan) ── */
+  --primary: #e1fdff;
+  --primary-container: #00f2ff;
+  --primary-fixed: #74f5ff;
+  --primary-fixed-dim: #00dbe7;
+  --on-primary: #00363a;
+  --on-primary-fixed: #002022;
+  --surface-tint: #00dbe7;
+
+  /* ── Secondary (Deep Energy Blue) ── */
+  --secondary: #b3c5ff;
+  --secondary-container: #0266ff;
+  --on-secondary: #002b75;
+
+  /* ── Tertiary (Level-Up Gold) ── */
+  --tertiary: #fff6e4;
+  --tertiary-container: #ffd81d;
+  --tertiary-fixed: #ffe16d;
+  --tertiary-fixed-dim: #e9c400;
+  --on-tertiary: #3a3000;
+  --on-tertiary-container: #715e00;
+
+  /* ── Error ── */
+  --error: #ffb4ab;
+  --error-container: #93000a;
+  --on-error: #690005;
+
+  /* ── Background ── */
+  --background: #111318;
+  --on-background: #e2e2e8;
+  --surface-variant: #333539;
+
+  /* ── Semantic aliases ── */
+  --primary-cyan: #74f5ff;
+  --primary-glow: rgba(116, 245, 255, 0.5);
+  --bg-base: #0c0e12;
+  --bg-sidebar: #111318;
+  --border-dim: rgba(255, 255, 255, 0.16);
+  --border-cyan: rgba(255, 255, 255, 0.28);
+  --text-primary: #f5f7fa;
+  --text-secondary: rgba(245, 247, 250, 0.72);
+}
+
+/* ── Base ── */
+html, body {
+  background-color: var(--bg-base);
+  color: var(--on-surface);
+  font-family: 'Geist', sans-serif;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+html {
+  background:
+    radial-gradient(circle at top left, rgba(116, 245, 255, 0.06), transparent 35%),
+    radial-gradient(circle at top right, rgba(116, 245, 255, 0.04), transparent 28%),
+    linear-gradient(180deg, #0c0e12 0%, #090b0f 100%);
+}
+
+body {
+  background:
+    linear-gradient(180deg, rgba(12, 14, 18, 0.92) 0%, rgba(9, 11, 15, 1) 100%),
+    radial-gradient(circle at 20% 20%, rgba(116, 245, 255, 0.08), transparent 20%),
+    radial-gradient(circle at 80% 0%, rgba(116, 245, 255, 0.05), transparent 18%);
+}
+
+/* ── Scanline overlay ── */
+body::before {
+  content: '';
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background: linear-gradient(
+    rgba(18, 16, 16, 0) 50%,
+    rgba(0, 0, 0, 0.08) 50%
+  );
+  background-size: 100% 4px;
+  pointer-events: none;
+  z-index: 9999;
+  opacity: 0.25;
+}
+
+/* ── Mana panel (glassmorphic card) ── */
+.mana-panel {
+  position: relative;
+  background: linear-gradient(180deg, rgba(24, 27, 33, 0.92) 0%, rgba(17, 19, 24, 0.96) 100%);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+
+.mana-panel::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 1px;
+  background: var(--primary-cyan);
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.mana-panel:hover::before { opacity: 1; }
+
+.mana-panel:hover {
+  border-color: rgba(255, 255, 255, 0.3);
+  box-shadow: 0 0 24px rgba(255, 255, 255, 0.08);
+}
+
+/* ── System ID label ── */
+.system-id {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 2px;
+  color: rgba(245, 247, 250, 0.68);
+  text-transform: uppercase;
+}
+
+/* ── Font utilities ── */
+.font-mono-game {
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.font-headline {
+  font-family: 'Syne', sans-serif;
+}
+
+.app-shell {
+  position: relative;
+}
+
+.app-shell::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(90deg, rgba(255,255,255,0.015) 1px, transparent 1px),
+    linear-gradient(rgba(255,255,255,0.012) 1px, transparent 1px);
+  background-size: 80px 80px;
+  mask-image: radial-gradient(circle at center, black 55%, transparent 100%);
+  opacity: 0.35;
+}
+
+.dashboard-shell {
+  position: relative;
+}
+
+.dashboard-shell::after {
+  content: '';
+  position: fixed;
+  inset: auto 0 0 0;
+  height: 140px;
+  pointer-events: none;
+  background: linear-gradient(180deg, transparent, rgba(116,245,255,0.03));
+}
+
+/* ── Cyan glow text ── */
+.text-cyan-glow {
+  color: var(--primary-cyan);
+  text-shadow: 0 0 8px rgba(255, 255, 255, 0.45);
+}
+
+/* ── Rank badge with clipped corners ── */
+.rank-badge {
+  clip-path: polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%);
+  display: inline-block;
+}
+
+/* ── Segmented XP bar segment ── */
+.xp-segment-filled {
+  background: var(--primary-cyan);
+  box-shadow: 0 0 8px var(--primary-cyan), 0 0 2px var(--primary-cyan);
+  clip-path: polygon(2px 0%, 100% 0%, calc(100% - 2px) 100%, 0% 100%);
+}
+
+.xp-segment-empty {
+  background: rgba(255, 255, 255, 0.04);
+  clip-path: polygon(2px 0%, 100% 0%, calc(100% - 2px) 100%, 0% 100%);
+}
+
+/* ── Buttons ── */
+.btn-primary {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  color: var(--text-primary);
+  background: transparent;
+  padding: 10px 24px;
+  cursor: pointer;
+  transition: all 0.2s;
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-primary:hover {
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 0 16px rgba(255, 255, 255, 0.16);
+}
+
+.btn-primary:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.btn-gold {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  color: var(--text-primary);
+  background: transparent;
+  padding: 10px 24px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-gold:hover {
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 0 16px rgba(255, 255, 255, 0.16);
+}
+
+/* ── Input fields (bottom border only) ── */
+.input-system {
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--outline-variant);
+  color: var(--on-surface);
+  font-family: 'Geist', sans-serif;
+  font-size: 16px;
+  padding: 8px 0;
+  width: 100%;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.input-system:focus {
+  border-bottom-color: var(--primary-cyan);
+  box-shadow: 0 2px 0 0 rgba(116, 245, 255, 0.3);
+}
+
+.input-system::placeholder {
+  color: var(--outline);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  letter-spacing: 1px;
+}
+
+/* ── Animations ── */
+@keyframes pulse-cyan {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 1; }
+}
+
+.animate-pulse-cyan {
+  animation: pulse-cyan 2s infinite;
+}
+
+@keyframes flicker {
+  0%, 100% { opacity: 1; }
+  92% { opacity: 1; }
+  93% { opacity: 0.4; }
+  94% { opacity: 1; }
+  96% { opacity: 0.6; }
+  97% { opacity: 1; }
+}
+
+.animate-flicker {
+  animation: flicker 8s infinite;
+}
+
+/* ── Material icons ── */
+.material-symbols-outlined {
+  font-family: 'Material Symbols Outlined';
+  font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24;
+  vertical-align: middle;
+  line-height: 1;
+}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: var(--surface-container-lowest); }
+::-webkit-scrollbar-thumb {
+  background: var(--outline-variant);
+  border-radius: 0;
+}
+::-webkit-scrollbar-thumb:hover { background: var(--primary-fixed-dim); }
