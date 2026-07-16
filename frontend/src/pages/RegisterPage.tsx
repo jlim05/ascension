@@ -2,9 +2,6 @@ import { useState, useEffect, useRef } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { register } from "../api";
 
-const FOCUS_OPTIONS = ["Bulking", "Cutting", "Maintain", "MainGain"];
-const EQUIPMENT_OPTIONS = ["Full Gym", "Home/Dumbbells", "Bodyweight Only"];
-
 export default function RegisterPage() {
   const navigate = useNavigate();
   const [form, setForm] = useState({
@@ -85,18 +82,6 @@ export default function RegisterPage() {
     color: "#e2e2e8",
     padding: "8px 0",
     backgroundColor: "transparent",
-  };
-
-  const selectStyle = {
-    border: "none",
-    borderBottom: "1px solid #3a494b",
-    color: "#e2e2e8",
-    padding: "8px 0",
-    backgroundColor: "transparent",
-    width: "100%",
-    outline: "none",
-    fontFamily: "'JetBrains Mono', monospace",
-    fontSize: "12px",
   };
 
   return (

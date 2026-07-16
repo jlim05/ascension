@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useAuthStore } from "../store/authStore";
+import { useThemeStore } from "../store/themeStore";
 import { getTodaysQuest, getWeeklyGate, completeQuest, getMyProfile, getLeaderboard } from "../api";
 import type { Quest, LeaderboardEntry } from "../types";
 
@@ -120,6 +121,8 @@ const PROFILE_PORTRAIT_SVG = `data:image/svg+xml;utf8,${encodeURIComponent(`
 
 export default function DashboardPage({ section }: Props) {
   const { player, updatePlayer } = useAuthStore();
+  const { theme } = useThemeStore();
+  const isLight = theme === "light";
   const [quest, setQuest] = useState<Quest | null>(null);
   const [weeklyGate, setWeeklyGate] = useState<Quest | null>(null);
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
@@ -198,7 +201,8 @@ export default function DashboardPage({ section }: Props) {
       {/* Header */}
       <div className="mb-8">
         <div className="flex items-end gap-4 mb-1">
-          <h2 className="font-headline text-3xl md:text-4xl font-bold text-white uppercase tracking-tight">
+          <h2 className="font-headline text-3xl md:text-4xl font-bold uppercase tracking-tight"
+            style={{ color: isLight ? "#131b2e" : "#ffffff" }}>
             System Dashboard
           </h2>
           <div className="mb-2 h-px flex-1 hidden md:block" style={{ background: "var(--border-dim)" }}>
@@ -221,38 +225,61 @@ export default function DashboardPage({ section }: Props) {
             <section className="mana-panel p-6 overflow-hidden">
               <div className="system-id mb-4">OBJ_ID: #{player?.id?.slice(0, 8).toUpperCase()}</div>
               <div className="flex flex-col lg:flex-row lg:items-start gap-6 lg:gap-8">
-                <div className="shrink-0 space-y-3 w-full lg:w-[230px]">
+                <div className="shrink-0 space-y-3 w-full lg:w-57.5">
                   <div
-                    className="relative w-full lg:w-[230px] aspect-[3/4] border border-white/70 overflow-hidden"
+                    className="relative w-full lg:w-57.5 aspect-3/4 overflow-hidden"
                     style={{
                       backgroundImage: `url("${PROFILE_PORTRAIT_SVG}")`,
                       backgroundSize: "cover",
                       backgroundPosition: "center",
-                      boxShadow: "0 0 0 1px rgba(255,255,255,0.12), inset 0 0 40px rgba(116,245,255,0.08)",
+                      border: `1px solid ${isLight ? "rgba(46,49,255,0.16)" : "rgba(255,255,255,0.70)"}`,
+                      boxShadow: isLight
+                        ? "0 0 0 1px rgba(46,49,255,0.08), inset 0 0 40px rgba(46,49,255,0.05)"
+                        : "0 0 0 1px rgba(255,255,255,0.12), inset 0 0 40px rgba(116,245,255,0.08)",
                     }}>
-                    <div className="absolute inset-0" style={{ background: "radial-gradient(circle at 50% 20%, rgba(255,255,255,0.08), transparent 42%), linear-gradient(160deg, rgba(10,12,16,0) 30%, rgba(0,0,0,0.55) 100%)" }} />
-                    <div className="absolute inset-3 border border-white/15" />
+                    <div className="absolute inset-0" style={{ background: isLight ? "radial-gradient(circle at 50% 20%, rgba(46,49,255,0.04), transparent 42%), linear-gradient(160deg, rgba(255,255,255,0) 30%, rgba(46,49,255,0.10) 100%)" : "radial-gradient(circle at 50% 20%, rgba(255,255,255,0.08), transparent 42%), linear-gradient(160deg, rgba(10,12,16,0) 30%, rgba(0,0,0,0.55) 100%)" }} />
+                    <div className="absolute inset-3" style={{ border: `1px solid ${isLight ? "rgba(46,49,255,0.10)" : "rgba(255,255,255,0.15)"}` }} />
                   </div>
-                  <p className="text-center font-headline text-sm uppercase tracking-[0.25em] text-white/85">
+                  <p className="text-center font-headline text-sm uppercase tracking-[0.25em]"
+                    style={{ color: isLight ? "#131b2e" : "rgba(255,255,255,0.85)" }}>
                     Rank: {player?.rank}
                   </p>
                 </div>
 
                 <div className="flex-1 min-w-0 space-y-5 lg:pt-1">
-                  <div className="max-w-[680px]">
-                    <h3 className="font-headline text-2xl md:text-[2rem] font-bold text-white tracking-wide uppercase">
+                  <div className="max-w-170">
+                    <h3 className="font-headline text-2xl md:text-[2rem] font-bold tracking-wide uppercase"
+                      style={{ color: isLight ? "#131b2e" : "#ffffff" }}>
                       {player?.username?.toUpperCase()}
                     </h3>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-3 max-w-[420px]">
-                    <div className="p-3 border border-[rgba(116,245,255,0.28)] bg-[rgba(116,245,255,0.03)] min-h-[104px] flex flex-col justify-between">
+                  <div className="grid grid-cols-2 gap-3 max-w-105">
+                    <div className="p-3 min-h-26 flex flex-col justify-between"
+                      style={{
+                        border: isLight ? "1px solid rgba(46,49,255,0.10)" : "1px solid rgba(116,245,255,0.28)",
+                        background: isLight
+                          ? "linear-gradient(180deg, rgba(248,249,255,0.98) 0%, rgba(235,239,255,0.90) 100%)"
+                          : "rgba(116,245,255,0.03)",
+                        boxShadow: isLight
+                          ? "inset 0 1px 0 rgba(255,255,255,0.85), 0 1px 5px rgba(46,49,255,0.04)"
+                          : "none",
+                      }}>
                       <p className="system-id">LEVEL</p>
-                      <p className="font-mono-game text-3xl font-bold text-white">{player?.level}</p>
+                      <p className="font-mono-game text-3xl font-bold" style={{ color: isLight ? "#131b2e" : "#ffffff" }}>{player?.level}</p>
                     </div>
-                    <div className="p-3 border border-[rgba(116,245,255,0.28)] bg-[rgba(116,245,255,0.03)] min-h-[104px] flex flex-col justify-between">
+                    <div className="p-3 min-h-26 flex flex-col justify-between"
+                      style={{
+                        border: isLight ? "1px solid rgba(46,49,255,0.10)" : "1px solid rgba(116,245,255,0.28)",
+                        background: isLight
+                          ? "linear-gradient(180deg, rgba(248,249,255,0.98) 0%, rgba(235,239,255,0.90) 100%)"
+                          : "rgba(116,245,255,0.03)",
+                        boxShadow: isLight
+                          ? "inset 0 1px 0 rgba(255,255,255,0.85), 0 1px 5px rgba(46,49,255,0.04)"
+                          : "none",
+                      }}>
                       <p className="system-id">GOAL</p>
-                      <p className="font-mono-game text-sm uppercase tracking-widest text-white leading-tight">
+                      <p className="font-mono-game text-sm uppercase tracking-widest leading-tight" style={{ color: isLight ? "#131b2e" : "#ffffff" }}>
                         {player?.goal?.focus ?? "Training"}
                       </p>
                     </div>
@@ -264,14 +291,22 @@ export default function DashboardPage({ section }: Props) {
                       <span>EXPERIENCE POINTS (EXP)</span>
                       <span>{xpPercent.toFixed(0)}%</span>
                     </div>
-                    <div className="h-4 flex gap-0.5 max-w-[560px]">
+                    <div className="h-4 flex gap-0.5 max-w-140 p-0.5"
+                      style={{
+                        background: isLight ? "rgba(241,244,255,0.95)" : "transparent",
+                        border: isLight ? "1px solid rgba(46,49,255,0.14)" : "none",
+                        boxShadow: isLight ? "inset 0 1px 1px rgba(46,49,255,0.04)" : "none",
+                      }}>
                       {Array.from({ length: 10 }).map((_, i) => (
                         <div key={i} className="flex-1 h-full transition-all duration-300"
                           style={{
                             background: i < Math.floor(xpPercent / 10)
-                              ? "var(--primary-cyan)" : "rgba(255,255,255,0.05)",
+                              ? (isLight ? "#2e31ff" : "var(--primary-cyan)")
+                              : (isLight ? "rgba(214,219,255,0.95)" : "rgba(255,255,255,0.05)"),
                             boxShadow: i < Math.floor(xpPercent / 10)
-                              ? "0 0 8px var(--primary-cyan)" : "none",
+                              ? (isLight ? "0 0 8px rgba(46,49,255,0.22)" : "0 0 8px var(--primary-cyan)")
+                              : "none",
+                            border: isLight ? "1px solid rgba(255,255,255,0.65)" : "none",
                             clipPath: "polygon(0 0, 90% 0, 100% 100%, 10% 100%)",
                           }} />
                       ))}

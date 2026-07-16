@@ -4,9 +4,12 @@ import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
 import DashboardPage from "./pages/DashboardPage";
 import Sidebar from "./components/Sidebar";
+import { useThemeStore } from "./store/themeStore";
 
 function TopNav() {
   const location = useLocation();
+  const { theme, toggleTheme } = useThemeStore();
+  const isLight = theme === "light";
   const tabs = [
     { path: "/dashboard", label: "SYSTEM" },
     { path: "/quests", label: "QUESTS" },
@@ -17,14 +20,14 @@ function TopNav() {
   return (
     <header className="fixed top-0 right-0 left-0 md:left-64 z-50 h-16 flex items-center justify-between px-5 md:px-6"
       style={{
-        backgroundColor: "rgba(12, 14, 18, 0.92)",
-        borderBottom: "1px solid rgba(255,255,255,0.18)",
+        backgroundColor: isLight ? "rgba(250, 248, 255, 0.96)" : "rgba(12, 14, 18, 0.92)",
+        borderBottom: isLight ? "1px solid rgba(46, 49, 255, 0.12)" : "1px solid rgba(255,255,255,0.18)",
         backdropFilter: "blur(12px)",
         WebkitBackdropFilter: "blur(12px)",
       }}>
       <div className="flex items-center gap-6 min-w-0">
         <h2 className="font-headline text-sm md:text-base font-bold uppercase tracking-[0.35em] whitespace-nowrap"
-          style={{ color: "var(--text-primary)" }}>
+          style={{ color: isLight ? "#131b2e" : "var(--text-primary)" }}>
           ASCENSION
         </h2>
         <div className="hidden md:flex items-center gap-6 lg:gap-8">
@@ -36,9 +39,13 @@ function TopNav() {
                 href={path}
                 className="font-mono-game text-[11px] uppercase tracking-[0.35em] pb-1 transition-colors"
                 style={{
-                  color: active ? "var(--text-primary)" : "var(--text-secondary)",
-                  borderBottom: active ? "1px solid var(--text-primary)" : "1px solid transparent",
-                  textShadow: active ? "0 0 10px rgba(255,255,255,0.22)" : "none",
+                  color: active
+                    ? (isLight ? "#131b2e" : "var(--text-primary)")
+                    : (isLight ? "rgba(19,27,46,0.62)" : "var(--text-secondary)"),
+                  borderBottom: active
+                    ? `1px solid ${isLight ? "#2e31ff" : "var(--text-primary)"}`
+                    : "1px solid transparent",
+                  textShadow: active && !isLight ? "0 0 10px rgba(255,255,255,0.22)" : "none",
                 }}>
                 {label}
               </a>
@@ -48,24 +55,37 @@ function TopNav() {
       </div>
 
       <div className="flex items-center gap-4 md:gap-5">
+        {/* Theme toggle */}
+        <button
+          onClick={toggleTheme}
+          className="material-symbols-outlined cursor-pointer transition-colors text-[20px]"
+          style={{ color: isLight ? "#131b2e" : "var(--text-primary)", background: "none", border: "none" }}
+          title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+          onMouseEnter={(e) => (e.currentTarget.style.color = isLight ? "#2e31ff" : "#fff")}
+          onMouseLeave={(e) => (e.currentTarget.style.color = isLight ? "#131b2e" : "var(--text-primary)") }>
+          {theme === "dark" ? "light_mode" : "dark_mode"}
+        </button>
+
         <span className="material-symbols-outlined cursor-pointer transition-colors text-[20px]"
-          style={{ color: "var(--text-primary)" }}
-          onMouseEnter={(e) => (e.currentTarget.style.color = "#fff")}
-          onMouseLeave={(e) => (e.currentTarget.style.color = "var(--text-secondary)")}>
+          style={{ color: isLight ? "#131b2e" : "var(--text-primary)" }}
+          onMouseEnter={(e) => (e.currentTarget.style.color = isLight ? "#2e31ff" : "#fff")}
+          onMouseLeave={(e) => (e.currentTarget.style.color = isLight ? "#131b2e" : "var(--text-secondary)") }>
           notifications
         </span>
         <span className="material-symbols-outlined cursor-pointer transition-colors text-[20px]"
-          style={{ color: "var(--text-primary)" }}
-          onMouseEnter={(e) => (e.currentTarget.style.color = "#fff")}
-          onMouseLeave={(e) => (e.currentTarget.style.color = "var(--text-secondary)")}>
+          style={{ color: isLight ? "#131b2e" : "var(--text-primary)" }}
+          onMouseEnter={(e) => (e.currentTarget.style.color = isLight ? "#2e31ff" : "#fff")}
+          onMouseLeave={(e) => (e.currentTarget.style.color = isLight ? "#131b2e" : "var(--text-secondary)") }>
           settings
         </span>
         <div className="w-9 h-9 rounded-full flex items-center justify-center font-mono-game text-xs font-bold overflow-hidden"
           style={{
-            border: "1px solid rgba(255,255,255,0.35)",
-            background: "radial-gradient(circle at 30% 30%, rgba(255,255,255,0.18), rgba(255,255,255,0.05) 55%, rgba(12,14,18,0.9) 100%)",
-            color: "var(--text-primary)",
-            boxShadow: "0 0 18px rgba(255,255,255,0.08)",
+            border: isLight ? "1px solid rgba(46,49,255,0.22)" : "1px solid rgba(255,255,255,0.35)",
+            background: isLight
+              ? "radial-gradient(circle at 30% 30%, rgba(255,255,255,0.92), rgba(238,241,255,0.75) 55%, rgba(224,229,255,0.95) 100%)"
+              : "radial-gradient(circle at 30% 30%, rgba(255,255,255,0.18), rgba(255,255,255,0.05) 55%, rgba(12,14,18,0.9) 100%)",
+            color: isLight ? "#131b2e" : "var(--text-primary)",
+            boxShadow: isLight ? "0 0 18px rgba(46,49,255,0.08)" : "0 0 18px rgba(255,255,255,0.08)",
           }}>
           {useAuthStore.getState().player?.username?.slice(0, 2).toUpperCase() ?? "??"}
         </div>
@@ -79,7 +99,7 @@ function App() {
 
   return (
     <BrowserRouter>
-      <div className="min-h-screen app-shell" style={{ backgroundColor: "#0c0e12" }}>
+      <div className="min-h-screen app-shell" style={{ backgroundColor: "var(--bg-base)" }}>
         {token && <Sidebar />}
         {token && <TopNav />}
         <div className={`${token ? "md:ml-64 pt-16" : ""}`}>
