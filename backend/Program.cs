@@ -7,6 +7,7 @@ using Ascension.Api.Data;
 using Ascension.Api.Models;
 using System.Text;
 using Ascension.Api.Services;
+using Ascension.Api.Hubs;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -80,6 +81,7 @@ builder.Services.AddControllers()
     });
 builder.Services.AddOpenApi();
 builder.Services.AddScoped<QuestService>();
+builder.Services.AddSignalR();
 
 // ── Build the app ─────────────────────────────────────────
 var app = builder.Build();
@@ -94,5 +96,6 @@ app.UseCors("AscensionPolicy");
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
+app.MapHub<NotificationHub>("/hubs/notifications");
 
 app.Run();

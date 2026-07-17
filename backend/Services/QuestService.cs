@@ -1,16 +1,19 @@
 using Ascension.Api.Data;
 using Ascension.Api.Models;
 using Microsoft.EntityFrameworkCore;
-
+using Ascension.Api.Hubs;
+using Microsoft.AspNetCore.SignalR;
 namespace Ascension.Api.Services;
 
 public class QuestService
 {
     private readonly AscensionDbContext _context;
+    private readonly IHubContext<NotificationHub> _hubContext;
 
-    public QuestService(AscensionDbContext context)
+    public QuestService(AscensionDbContext context, IHubContext<NotificationHub> hubContext)
     {
         _context = context;
+        _hubContext = hubContext;
     }
 
     public async Task<Quest> GetOrGenerateTodaysQuestAsync(string playerId)
@@ -87,6 +90,19 @@ public class QuestService
 
         // Check if player levels up (100 XP per level)
         CheckLevelUp(player);
+
+        // Send real-time notification to this player's connection
+        await _hubContext.Clients.Group(playerId).SendAsync("QuestCompleted", new
+        {
+            message = $"Quest complete. +{quest.XPReward} XP awarded.",
+            xpReward = quest.XPReward,
+            statReward = quest.StatReward,
+            statType = quest.Type,
+            isWeeklyGate = quest.IsWeeklyGate,
+            newLevel = player.Level,
+            newRank = player.Rank,
+            leveledUp = player.Level > (player.CurrentXP - quest.XPReward) / 100 + 1
+        });
 
         await _context.SaveChangesAsync();
     }

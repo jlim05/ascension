@@ -2,11 +2,23 @@ using Ascension.Api.Data;
 using Ascension.Api.Models;
 using Ascension.Api.Services;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.SignalR;
+using Ascension.Api.Hubs;
+using Moq;
 
 namespace Ascension.Tests;
 
 public class QuestServiceTests
 {
+    private IHubContext<NotificationHub> CreateFakeHubContext()
+    {
+        var mockClients = new Mock<IHubClients>();
+        var mockClientProxy = new Mock<IClientProxy>();
+        mockClients.Setup(c => c.Group(It.IsAny<string>())).Returns(mockClientProxy.Object);
+        var mockHub = new Mock<IHubContext<NotificationHub>>();
+        mockHub.Setup(h => h.Clients).Returns(mockClients.Object);
+        return mockHub.Object;
+    }
     private AscensionDbContext CreateDb()
     {
         var options = new DbContextOptionsBuilder<AscensionDbContext>()
@@ -40,7 +52,7 @@ public class QuestServiceTests
         db.Users.Add(player);
         await db.SaveChangesAsync();
 
-        var service = new QuestService(db);
+        var service = new QuestService(db, CreateFakeHubContext());
 
         // Act
         var quest = await service.GetOrGenerateTodaysQuestAsync(player.Id);
@@ -77,7 +89,7 @@ public class QuestServiceTests
         db.Quests.Add(existingQuest);
         await db.SaveChangesAsync();
 
-        var service = new QuestService(db);
+        var service = new QuestService(db, CreateFakeHubContext());
 
         // Act
         var quest = await service.GetOrGenerateTodaysQuestAsync(player.Id);
@@ -102,8 +114,8 @@ public class QuestServiceTests
         await db1.SaveChangesAsync();
         await db2.SaveChangesAsync();
 
-        var bulkingService = new QuestService(db1);
-        var mainGainService = new QuestService(db2);
+        var bulkingService = new QuestService(db1, CreateFakeHubContext());
+        var mainGainService = new QuestService(db2, CreateFakeHubContext());
 
         // Act
         var bulkingQuest = await bulkingService.GetOrGenerateTodaysQuestAsync(bulkingPlayer.Id);
@@ -122,7 +134,7 @@ public class QuestServiceTests
         db.Users.Add(player);
         await db.SaveChangesAsync();
 
-        var service = new QuestService(db);
+        var service = new QuestService(db, CreateFakeHubContext());
 
         // Act
         var quest = await service.GetOrGenerateTodaysQuestAsync(player.Id);
@@ -157,7 +169,7 @@ public class QuestServiceTests
         db.Quests.Add(quest);
         await db.SaveChangesAsync();
 
-        var service = new QuestService(db);
+        var service = new QuestService(db, CreateFakeHubContext());
 
         // Act
         await service.CompleteQuestAsync(quest.Id, player.Id);
@@ -203,7 +215,7 @@ public class QuestServiceTests
         db.Quests.Add(yesterdayQuest);
         await db.SaveChangesAsync();
 
-        var service = new QuestService(db);
+        var service = new QuestService(db, CreateFakeHubContext());
 
         // Act — getting today's quest should trigger the penalty check
         await service.GetOrGenerateTodaysQuestAsync(player.Id);
@@ -227,7 +239,7 @@ public class QuestServiceTests
         db.Users.Add(player);
         await db.SaveChangesAsync();
 
-        var service = new QuestService(db);
+        var service = new QuestService(db, CreateFakeHubContext());
 
         // Find the next Monday from today (or use today if it's Monday)
         var today = DateTime.UtcNow.Date;
