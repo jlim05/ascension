@@ -29,13 +29,12 @@ It's built as a full-stack app: a **.NET 10 / EF Core / PostgreSQL** API and a
 
 Ascension is built around the gamification loop from *Solo Leveling*, applying HCI
 principles to keep training motivating:
-g
+
 - **Points & progression** — XP, Levels, and the E→D→C→B→A→S Hunter Rank ladder.
 - **Quests** — goal-driven **Daily Quests** plus a harder **Weekly Gate**.
 - **Streaks** — a 5-day streak unlocks an **XP boost** multiplier.
 - **Stats** — STR / AGI / VIT / INT grow from the type of training you log.
-- **Achievements / badges** — first PR, 7-day streak, first Gate cleared, etc.
-- **Leaderboard** — Players are ranked by Level/XP.
+- **Leaderboard** — Players are ranked by Level/XP against each other.
 - **Compassionate penalty design** — failing a quest applies a *recoverable* penalty
   (small stat decay + streak reset) with a follow-up **Penalty Quest** to recover,
   and the **Day-Off Token** as a streak-freeze. This deliberately counters
@@ -45,27 +44,73 @@ g
 
 ## ✨ What makes Ascension unique
 
-- A genuine **System-window aesthetic** (glowing blue UI, level-up notifications)
-  that gives the app a distinct visual identity rather than a generic dashboard.
-- A **deterministic, goal-driven quest engine** that personalises each day's training.
-- **Live notifications** — quest completions and level-ups arrive in real time.
-- **PvP challenges** — duel another Player on a quest and wager in-app items.
-- _TODO — add any extra standout features you build._
+- A genuine **System-window aesthetic** (glowing cyan UI, scanline overlay, mana panels)
+  that gives the app a distinct visual identity inspired by *Solo Leveling*.
+- A **deterministic, goal-driven quest engine** that personalises each day's training
+  based on the player's focus (Bulking, Cutting, Maintain, MainGain).
+- **Live notifications** — quest completions and level-ups arrive in real time via WebSockets.
+- **Dual theme system** — dark System mode and light Solar Ascension mode with fully
+  distinct design languages, not just a colour inversion.
 
 ---
 
-## 🚀 Advanced features checklist
+## 🚀 Advanced features
 
-> **Note:** Only the top 3 listed here are marked. These are my chosen three.
+> Only three features are marked. These are my chosen three.
 
-- [ ] **WebSockets** — real-time notifications: quest completions, level-ups, and
-      live challenge updates pushed to the browser.
-- [ ] **Theme switching** — light / dark mode toggle (the System window theming).
-- [ ] **Multiplayer challenges** — players challenge each other to a quest and stake
-      in-app virtual items; the server validates the result and the winner takes the pot.
+### ⚡ WebSockets
+Real-time notifications via SignalR. When a player completes a quest or levels up,
+a notification is pushed instantly from the server to the browser without any
+page refresh or polling. The frontend maintains a persistent WebSocket connection
+through SignalR's `HubConnection`, authenticated with the player's JWT token.
+The server pushes `QuestCompleted` events to a player-specific group so
+notifications are private and targeted. The connection reconnects automatically
+if dropped.
 
-_Bonus (not one of the marked three): user accounts with **password hashing** via
-ASP.NET Core Identity, required to support multiplayer._
+### 🌓 Theme switching
+Full light/dark mode toggle with persistent preference via Zustand + localStorage.
+Dark mode uses the **System** aesthetic (electric cyan on near-black, scanline
+overlay, glassmorphic mana panels). Light mode uses the **Solar Ascension**
+palette (Electric Indigo on pure white, frosted glass panels, blueprint grid
+overlay). The toggle lives in the top navbar and applies instantly across all
+pages via CSS custom properties on the `html` element — no page reload required.
+
+### 🔐 Security measures
+Minimum two measures implemented, each justified below.
+
+**1. Password hashing — ASP.NET Core Identity**
+User passwords are never stored in plain text. ASP.NET Core Identity
+automatically hashes every password using PBKDF2 with HMAC-SHA256, a random
+salt, and 100,000 iterations before storing it in the database. This means that
+even if the Neon PostgreSQL database were breached, an attacker would be unable
+to recover user passwords. This is critical for Ascension because players may
+reuse passwords across other services — protecting them here protects them
+everywhere.
+
+**2. Rate limiting — Fixed window**
+All API endpoints are protected by a fixed-window rate limiter: 30 requests per
+minute per client, with a queue of 5. Excess requests receive a `429 Too Many
+Requests` response. This prevents brute-force attacks on the login endpoint
+(where an attacker might try thousands of password combinations) and protects
+the quest engine from abuse (e.g., a script repeatedly hitting
+`/api/quests/{id}/complete`). Without rate limiting, both attacks are trivial
+against a public API.
+
+**3. JWT authentication + authorisation**
+All player-specific endpoints (`/api/quests`, `/api/players`) require a valid
+signed JWT token in the `Authorization: Bearer` header. Tokens are signed with
+HMAC-SHA256 using a secret stored in `dotnet user-secrets` locally and Azure
+environment variables in production — never in source code. Tokens expire after
+7 days. This ensures players can only access their own data and cannot
+manipulate other players' quests or stats.
+
+**4. Input validation and sanitisation**
+All incoming data is validated before reaching the database. Identity enforces
+password rules (minimum 6 characters, at least one digit). Entity Framework
+Core uses parameterised queries for all database operations, making SQL
+injection impossible. DTOs (Data Transfer Objects) are used on all endpoints so
+raw entity classes are never exposed to or accepted from the outside world —
+a player cannot, for example, send a request that sets their own level to 99.
 
 ---
 
@@ -73,10 +118,10 @@ ASP.NET Core Identity, required to support multiplayer._
 
 | Layer    | Tech |
 |----------|------|
-| Frontend | React, TypeScript, Vite, React Router, Zustand, Tailwind, Vitest |
-| Backend  | .NET 10 Web API, EF Core, ASP.NET Core Identity + JWT, Scalar, xUnit |
-| Database | PostgreSQL |
-| Deploy   | _TODO (e.g. Vercel + Render + Neon)_ |
+| Frontend | React, TypeScript, Vite, React Router, Zustand, Tailwind CSS |
+| Backend  | .NET 10 Web API, EF Core, ASP.NET Core Identity + JWT, SignalR, Scalar, xUnit |
+| Database | PostgreSQL (Neon) |
+| Deploy   | Azure App Service (backend), Azure Static Web Apps (frontend), Neon PostgreSQL |
 
 ---
 
@@ -88,8 +133,16 @@ Requires the [.NET 10 SDK](https://dotnet.microsoft.com/download).
 cd backend
 dotnet run
 ```
-- API: `http://localhost:5000`
-- Scalar docs: `http://localhost:5000/scalar`
+- API: `http://localhost:5202`
+- Scalar docs: `http://localhost:5202/scalar`
+
+You will need to configure the following user secrets:
+```bash
+dotnet user-secrets set "ConnectionStrings:DefaultConnection" "your-neon-connection-string"
+dotnet user-secrets set "JwtSettings:Secret" "your-jwt-secret"
+dotnet user-secrets set "JwtSettings:Issuer" "Ascension"
+dotnet user-secrets set "JwtSettings:Audience" "AscensionUsers"
+```
 
 ### Frontend
 Requires [Node.js v20+](https://nodejs.org).
@@ -104,8 +157,10 @@ Open `http://localhost:5173`. Start the backend first.
 
 ## 🧪 Testing
 ```bash
-# Backend
-cd backend && dotnet test
+# Backend (xUnit)
+cd ~/Documents/ascension
+dotnet test Ascension.slnx
+
 # Frontend
 cd frontend && npm run test
 ```
@@ -115,9 +170,10 @@ cd frontend && npm run test
 ## 📁 Repository structure
 ```
 ascension/
-├── backend/    # .NET 10 Web API, EF Core, PostgreSQL
-├── frontend/   # React + TypeScript (Vite)
-├── specs/      # Planning, design docs, and AI prompt logs (.md)
+├── backend/        # .NET 10 Web API, EF Core, PostgreSQL, SignalR
+├── backend.tests/  # xUnit test project
+├── frontend/       # React + TypeScript (Vite)
+├── specs/          # Planning, data model, and AI prompt logs (.md)
 └── README.md
 ```
 
@@ -125,7 +181,15 @@ ascension/
 
 ## 🔄 Self-reflection
 
-_TODO — fill in before submission: if you did this again, what would you change?_
+If I did this again, I would design the data model with all features in mind from
+the start rather than iterating on it mid-build. I would also set up deployment
+earlier in the process rather than at the end, as environment differences between
+local and production caused unexpected issues. I found TDD genuinely useful for the
+quest engine — writing tests first caught edge cases I wouldn't have considered
+otherwise (the streak reset, the penalty deduction, the Weekly Gate timing), and
+I would apply that approach to more of the codebase next time. The Solo Leveling
+theme also proved to be a strong design constraint — having a clear aesthetic
+reference made every UI decision faster and more consistent.
 
 ---
 

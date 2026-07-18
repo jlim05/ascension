@@ -8,7 +8,8 @@ using Ascension.Api.Models;
 using System.Text;
 using Ascension.Api.Services;
 using Ascension.Api.Hubs;
-
+using Microsoft.AspNetCore.RateLimiting;
+using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -17,11 +18,8 @@ builder.Services.AddDbContext<AscensionDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 // ── Identity ─────────────────────────────────────────────
-// Wires up the user account system using our Player class
-// and stores everything in our existing AscensionDbContext
 builder.Services.AddIdentity<Player, IdentityRole>(options =>
 {
-    // Password rules — relaxed slightly for a game app
     options.Password.RequireDigit = true;
     options.Password.RequiredLength = 6;
     options.Password.RequireNonAlphanumeric = false;
@@ -47,14 +45,12 @@ builder.Services.AddCors(options =>
 });
 
 // ── JWT Authentication ────────────────────────────────────
-// Pulls the JWT settings from user-secrets
 var jwtSecret = builder.Configuration["JwtSettings:Secret"]!;
 var jwtIssuer = builder.Configuration["JwtSettings:Issuer"]!;
 var jwtAudience = builder.Configuration["JwtSettings:Audience"]!;
 
 builder.Services.AddAuthentication(options =>
 {
-    
     options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
     options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
 })
@@ -64,8 +60,8 @@ builder.Services.AddAuthentication(options =>
     {
         ValidateIssuer = true,
         ValidateAudience = true,
-        ValidateLifetime = true,        // tokens expire
-        ValidateIssuerSigningKey = true, // signature must match our secret
+        ValidateLifetime = true,
+        ValidateIssuerSigningKey = true,
         ValidIssuer = jwtIssuer,
         ValidAudience = jwtAudience,
         IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret))
@@ -82,7 +78,6 @@ builder.Services.AddAuthentication(options =>
             {
                 context.Token = accessToken;
             }
-
             return Task.CompletedTask;
         }
     };
@@ -99,6 +94,19 @@ builder.Services.AddOpenApi();
 builder.Services.AddScoped<QuestService>();
 builder.Services.AddSignalR();
 
+// ── Rate limiting ─────────────────────────────────────────
+builder.Services.AddRateLimiter(options =>
+{
+    options.AddFixedWindowLimiter("fixed", limiterOptions =>
+    {
+        limiterOptions.PermitLimit = 30;
+        limiterOptions.Window = TimeSpan.FromMinutes(1);
+        limiterOptions.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+        limiterOptions.QueueLimit = 5;
+    });
+    options.RejectionStatusCode = 429;
+});
+
 // ── Build the app ─────────────────────────────────────────
 var app = builder.Build();
 
@@ -107,8 +115,10 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
     app.MapScalarApiReference();
 }
+
 app.UseHttpsRedirection();
 app.UseCors("AscensionPolicy");
+app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
