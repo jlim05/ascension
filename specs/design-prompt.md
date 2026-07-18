@@ -1,0 +1,1 @@
+**Prompt used:** I'm building a web app called Ascension — a gamified gym tracker inspired by the anime Solo Leveling. The UI should feel like "the System" from the anime: a mysterious, otherworldly interface that appears to the chosen hunter. Think dark holographic panels, glowing blue energy, dramatic typography. First, create me a dashboard that matches this theme.
