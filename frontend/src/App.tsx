@@ -5,6 +5,7 @@ import RegisterPage from "./pages/RegisterPage";
 import DashboardPage from "./pages/DashboardPage";
 import Sidebar from "./components/Sidebar";
 import { useThemeStore } from "./store/themeStore";
+import NotificationToast from "./components/NotificationToast";
 
 function TopNav() {
   const location = useLocation();
@@ -102,6 +103,7 @@ function App() {
       <div className="min-h-screen app-shell" style={{ backgroundColor: "var(--bg-base)" }}>
         {token && <Sidebar />}
         {token && <TopNav />}
+        <NotificationToast />
         <div className={`${token ? "md:ml-64 pt-16" : ""}`}>
           <Routes>
             <Route path="/" element={token ? <Navigate to="/dashboard" /> : <Navigate to="/login" />} />
