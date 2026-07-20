@@ -7,6 +7,15 @@ export default defineConfig({
   server: {
     proxy: {
       "/api": "http://localhost:5202",
+      "/hubs": {
+        target: "http://localhost:5202",
+        ws: true,
+      },
     },
+  },
+  test: {
+    globals: true,
+    environment: "jsdom",
+    setupFiles: "./src/test/setup.ts",
   },
 });
