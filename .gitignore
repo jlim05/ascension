@@ -480,3 +480,11 @@ $RECYCLE.BIN/
 
 # Vim temporary swap files
 *.swp
+
+# dotnet publish output (Render's build command writes here)
+out/
+
+# Local env overrides — VITE_ vars are baked into the bundle, so never secrets,
+# but keep machine-specific values out of git anyway. .env.example is tracked.
+.env.local
+.env.*.local

@@ -1,5 +1,6 @@
 import * as signalR from "@microsoft/signalr";
 import { create } from "zustand";
+import { NOTIFICATION_HUB_URL } from "../config";
 
 export interface Notification {
   id: string;
@@ -39,7 +40,7 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
     if (existing) return;
 
     const connection = new signalR.HubConnectionBuilder()
-      .withUrl("http://localhost:5202/hubs/notifications", {
+      .withUrl(NOTIFICATION_HUB_URL, {
         accessTokenFactory: () => token,
       })
       .withAutomaticReconnect()

@@ -1,8 +1,9 @@
 import axios from "axios";
 import { useAuthStore } from "../store/authStore";
+import { API_BASE_URL } from "../config";
 
 const client = axios.create({
-  baseURL: "/api",
+  baseURL: API_BASE_URL,
 });
 
 // Interceptor — runs before every request

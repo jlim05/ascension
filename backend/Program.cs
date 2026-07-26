@@ -10,8 +10,28 @@ using Ascension.Api.Services;
 using Ascension.Api.Hubs;
 using Microsoft.AspNetCore.RateLimiting;
 using System.Threading.RateLimiting;
+using Microsoft.AspNetCore.HttpOverrides;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// ── Hosting ───────────────────────────────────────────────
+// Render assigns the port at runtime via PORT and expects the app to bind
+// 0.0.0.0. Locally there is no PORT, so launchSettings.json (5202) wins.
+var port = Environment.GetEnvironmentVariable("PORT");
+if (!string.IsNullOrEmpty(port))
+{
+    builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
+}
+
+// Render terminates TLS at its edge and forwards plain HTTP, so the original
+// scheme and client IP only survive in the X-Forwarded-* headers. The proxy IP
+// isn't known ahead of time, hence the cleared allow-lists.
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+    options.KnownIPNetworks.Clear();
+    options.KnownProxies.Clear();
+});
 
 // ── Database ─────────────────────────────────────────────
 builder.Services.AddDbContext<AscensionDbContext>(options =>
@@ -29,15 +49,20 @@ builder.Services.AddIdentity<Player, IdentityRole>(options =>
 .AddDefaultTokenProviders();
 
 // ── CORS ──────────────────────────────────────────────────
+// The local dev origin is always allowed; deployed origins come from config so
+// the Vercel URL can change without a code change and a redeploy:
+//   Cors__AllowedOrigins__0=https://ascension.vercel.app
+// AllowCredentials means origins must be listed exactly — no wildcards.
+var corsOrigins = new List<string> { "http://localhost:5173" };
+corsOrigins.AddRange(
+    builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? []);
+
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AscensionPolicy", policy =>
     {
         policy
-            .WithOrigins(
-                "http://localhost:5173",
-                "https://your-azure-static-app.azurestaticapps.net"
-            )
+            .WithOrigins([.. corsOrigins])
             .AllowAnyHeader()
             .AllowAnyMethod()
             .AllowCredentials();
@@ -110,18 +135,30 @@ builder.Services.AddRateLimiter(options =>
 // ── Build the app ─────────────────────────────────────────
 var app = builder.Build();
 
+// Must run before anything that reads the scheme or the client IP.
+app.UseForwardedHeaders();
+
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
     app.MapScalarApiReference();
 }
 
-app.UseHttpsRedirection();
+// Render already redirects HTTP to HTTPS at its edge, and the app itself only
+// ever listens on plain HTTP there — redirecting again would just loop.
+if (app.Environment.IsDevelopment())
+{
+    app.UseHttpsRedirection();
+}
+
 app.UseCors("AscensionPolicy");
 app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 app.MapHub<NotificationHub>("/hubs/notifications");
+
+// Render's health check path — also a quick way to confirm a deploy is live.
+app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
 
 app.Run();
