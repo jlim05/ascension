@@ -1,0 +1,20 @@
+# Keep the build context small — everything the backend image needs lives in
+# backend/, so the frontend and all build output are excluded.
+**/bin/
+**/obj/
+out/
+frontend/
+backend.tests/
+specs/
+
+.git/
+.gitignore
+.vs/
+.vscode/
+.idea/
+.DS_Store
+
+README.md
+Ascension.slnx
+Dockerfile
+.dockerignore
