@@ -189,14 +189,19 @@ change, not a code change.
 
 ### Frontend — Vercel
 
-Standard Vite build (`npm run build`, output `dist`) with one environment
-variable:
+Root directory `frontend`, standard Vite build (`npm run build`, output `dist`),
+with one environment variable:
 ```
 VITE_API_URL=https://<backend>.onrender.com
 ```
 This is the backend **origin** — `/api` and `/hubs/notifications` are appended
 in [`src/config.ts`](frontend/src/config.ts). See
 [`.env.example`](frontend/.env.example).
+
+[`vercel.json`](frontend/vercel.json) rewrites all paths to `index.html`.
+The app uses `BrowserRouter`, so without it a refresh or direct visit to a route
+like `/dashboard` would 404 — those paths exist only in the client-side router,
+not on disk.
 
 > On Render's and Neon's free tiers both the service and the database suspend
 > after a period of inactivity, so the first request after an idle spell can
