@@ -99,7 +99,7 @@ against a public API.
 **3. JWT authentication + authorisation**
 All player-specific endpoints (`/api/quests`, `/api/players`) require a valid
 signed JWT token in the `Authorization: Bearer` header. Tokens are signed with
-HMAC-SHA256 using a secret stored in `dotnet user-secrets` locally and Azure
+HMAC-SHA256 using a secret stored in `dotnet user-secrets` locally and Render
 environment variables in production — never in source code. Tokens expire after
 7 days. This ensures players can only access their own data and cannot
 manipulate other players' quests or stats.
@@ -121,7 +121,7 @@ a player cannot, for example, send a request that sets their own level to 99.
 | Frontend | React, TypeScript, Vite, React Router, Zustand, Tailwind CSS |
 | Backend  | .NET 10 Web API, EF Core, ASP.NET Core Identity + JWT, SignalR, Scalar, xUnit |
 | Database | PostgreSQL (Neon) |
-| Deploy   | Azure App Service (backend), Azure Static Web Apps (frontend), Neon PostgreSQL |
+| Deploy   | Render (backend, Docker), Vercel (frontend), Neon PostgreSQL |
 
 ---
 
@@ -152,6 +152,55 @@ npm install
 npm run dev
 ```
 Open `http://localhost:5173`. Start the backend first.
+
+Vite proxies `/api` and `/hubs` to port 5202, so no backend URL is hardcoded in
+the frontend and `VITE_API_URL` stays unset for local development.
+
+---
+
+## ☁️ Deployment
+
+### Backend — Render (Docker)
+
+Render's native runtimes cover Node, Python, Ruby, Go, Rust and Elixir, but not
+.NET, so the API is deployed as a **Docker** web service built from the
+[`Dockerfile`](Dockerfile) at the repo root (multi-stage: `sdk:10.0` to publish,
+`aspnet:10.0` to run as a non-root user).
+
+| Setting | Value |
+|---------|-------|
+| Runtime | Docker |
+| Dockerfile path | `./Dockerfile` |
+| Docker build context | `.` |
+| Health check path | `/health` |
+
+Environment variables:
+```
+ConnectionStrings__DefaultConnection   # Neon connection string
+JwtSettings__Secret                    # signing secret
+JwtSettings__Issuer                    # Ascension
+JwtSettings__Audience                  # AscensionUsers
+Cors__AllowedOrigins__0                # https://<frontend>.vercel.app
+```
+`PORT` is injected by Render (default `10000`); `Program.cs` reads it and binds
+`0.0.0.0`. Allowed CORS origins are read from configuration rather than
+hardcoded, so pointing the API at a new frontend URL is an environment variable
+change, not a code change.
+
+### Frontend — Vercel
+
+Standard Vite build (`npm run build`, output `dist`) with one environment
+variable:
+```
+VITE_API_URL=https://<backend>.onrender.com
+```
+This is the backend **origin** — `/api` and `/hubs/notifications` are appended
+in [`src/config.ts`](frontend/src/config.ts). See
+[`.env.example`](frontend/.env.example).
+
+> On Render's and Neon's free tiers both the service and the database suspend
+> after a period of inactivity, so the first request after an idle spell can
+> take up to a minute while they wake.
 
 ---
 
