@@ -6,8 +6,11 @@
 > daily quest from **the System**, complete your training to earn XP and stats,
 > climb the Hunter Ranks (E → S), and don't fail your quests — the Penalty is real.
 
-**🔗 Live demo:** _TODO — add deployment link before submission_
+**🔗 Live demo:** https://ascension-blush.vercel.app
 **🎥 Video:** _TODO — add public video link before submission_
+
+> Hosted on free tiers — the API and database sleep when idle, so the very first
+> request may take up to a minute. Everything is instant once it wakes.
 
 ---
 
