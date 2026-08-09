@@ -14,7 +14,7 @@
 | **API (backend)** | https://ascension-api.onrender.com |
 | **Scalar API docs** | https://ascension-api.onrender.com/scalar/v1 |
 | **Health check** | https://ascension-api.onrender.com/health |
-| **🎥 Video** | https://drive.google.com/drive/folders/1NnBLGX-V_nyTfi90yW65O5lEViflPS93?usp=sharing |
+
 
 > Hosted on free tiers — the API and database sleep when idle, so the very first
 > request may take up to a minute. Everything is instant once it wakes.
