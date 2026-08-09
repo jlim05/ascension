@@ -11,10 +11,10 @@
 | What | Link |
 |------|------|
 | **Live app (frontend)** | https://ascension-blush.vercel.app |
-| **API (backend)** | `https://<your-service>.onrender.com` — _replace with your Render URL_ |
-| **Scalar API docs** | `https://<your-service>.onrender.com/scalar/v1` |
-| **Health check** | `https://<your-service>.onrender.com/health` |
-| **🎥 Video** | _TODO — add the public video link before submitting_ |
+| **API (backend)** | https://ascension-api.onrender.com |
+| **Scalar API docs** | https://ascension-api.onrender.com/scalar/v1 |
+| **Health check** | https://ascension-api.onrender.com/health |
+| **🎥 Video** | https://drive.google.com/drive/folders/1NnBLGX-V_nyTfi90yW65O5lEViflPS93?usp=sharing |
 
 > Hosted on free tiers — the API and database sleep when idle, so the very first
 > request may take up to a minute. Everything is instant once it wakes.
@@ -255,7 +255,7 @@ change, not a code change.
 Root directory `frontend`, standard Vite build (`npm run build`, output `dist`),
 with one environment variable:
 ```
-VITE_API_URL=https://<backend>.onrender.com
+VITE_API_URL=https://ascension-api.onrender.com
 ```
 This is the backend **origin** — `/api` and `/hubs/notifications` are appended
 in [`src/config.ts`](frontend/src/config.ts). See
