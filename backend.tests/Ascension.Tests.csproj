@@ -8,8 +8,15 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <!-- Controller tests construct ControllerContext / DefaultHttpContext, and the
+         quest tests mock IHubContext. Referencing the ASP.NET Core shared framework
+         supplies both, and replaces the legacy Microsoft.AspNetCore.SignalR 1.2.11
+         package, which shipped for netstandard2.0 and shadowed the in-box types. -->
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="coverlet.collector" Version="6.0.4" />
-    <PackageReference Include="Microsoft.AspNetCore.SignalR" Version="1.2.11" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="10.0.9" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
     <PackageReference Include="Moq" Version="4.20.72" />

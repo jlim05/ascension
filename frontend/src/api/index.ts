@@ -1,5 +1,5 @@
 import client from "./client";
-import type { Player, Quest, LeaderboardEntry } from "../types";
+import type { Player, Quest, LeaderboardEntry, Goal, GoalInput } from "../types";
 
 // Auth
 export const register = (data: {
@@ -36,3 +36,16 @@ export const getWeeklyGate = () =>
 
 export const completeQuest = (id: string) =>
   client.post(`/quests/${id}/complete`);
+
+// Goals — full CRUD. The player is identified by their JWT, so no id in the URL.
+export const getGoal = () =>
+  client.get<Goal>("/goals");
+
+export const createGoal = (data: GoalInput) =>
+  client.post<Goal>("/goals", data);
+
+export const updateGoal = (data: GoalInput) =>
+  client.put<Goal>("/goals", data);
+
+export const deleteGoal = () =>
+  client.delete("/goals");

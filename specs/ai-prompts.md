@@ -82,6 +82,48 @@ reviewed and manually accepted or rejected.
 
 ---
 
+## Pre-submission compliance review
+
+### Auditing the repo against the assessment brief
+**Tool:** Claude (agent mode, with the repo and the assessment PDF as context)
+**Prompt used:**
+> "Check the current folder on the requirements from the pdf. Change what is
+> needed and also generate me a script for the video part of the pdf"
+
+**Approach:** Rather than asking "does this look finished?", I gave the agent the
+brief and the codebase together and had it check each stated requirement against
+the actual source — not the README's claims about the source. That distinction
+mattered: two of the four findings were places where the README described
+behaviour the code did not have.
+
+**What it found, and what I did about each:**
+
+| Finding | Severity | Resolution |
+|---|---|---|
+| No `PUT`/`DELETE` anywhere — CRUD incomplete | Instant fail per the brief | Built `GoalsController` with all four verbs + a `/goals` page (see `goals-crud.md`) |
+| `MapScalarApiReference()` sat inside `if (IsDevelopment())` | High — the deployed API had no docs | Mapped Scalar unconditionally |
+| Rate limiter defined as a *named* policy no endpoint referenced | High — the README claimed protection that did not exist | Rewrote as a `GlobalLimiter`, partitioned by client IP |
+| Nav used `<a href>` instead of `<Link>` | Medium | Swapped to `Link`; full reloads were dropping the SignalR connection |
+
+**Where I overrode the AI:** it proposed a `Goals` *collection* with an
+"active goal" flag, which is a more conventional REST shape. I rejected it —
+that needs a schema migration and an extra `IsActive` concept the quest engine
+would then have to reason about, for no user-facing benefit. A player has one
+directive. `/api/goals` addressing a single resource keyed off the JWT is
+simpler and removes an entire class of authorisation bug, since there is no id
+in the URL to tamper with.
+
+**The lesson I actually took from this:** the rate-limiting bug is the one worth
+remembering. The code compiled, the middleware was registered, the README
+paragraph was confident and specific — and it protected nothing, because
+`AddFixedWindowLimiter("fixed", …)` creates a policy that only applies to
+endpoints decorated with `[EnableRateLimiting("fixed")]`. Nothing in the app
+was. I had written that README section myself from the API surface rather than
+from a test. A security control you have not *observed* failing closed is a
+security control you have not verified.
+
+---
+
 ## Decisions made without AI
 
 - Chose to remove multiplayer challenges due to complexity and time constraints,

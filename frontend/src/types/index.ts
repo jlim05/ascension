@@ -44,6 +44,20 @@ export interface LeaderboardEntry {
   vit: number;
 }
 
+// The four focuses the quest engine understands. Kept as a const array so the
+// select options and the Focus union can never drift apart.
+export const FOCUS_TYPES = ["Bulking", "Cutting", "Maintain", "MainGain"] as const;
+export type Focus = (typeof FOCUS_TYPES)[number];
+
+export interface Goal {
+  id: string;
+  focus: Focus;
+  daysPerWeek: number;
+  equipment: string;
+}
+
+export type GoalInput = Omit<Goal, "id">;
+
 export interface Achievement {
   name: string;
   description: string;

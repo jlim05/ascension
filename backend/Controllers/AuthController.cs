@@ -53,7 +53,9 @@ public class AuthController : ControllerBase
         var goal = new Goal
         {
             PlayerId = player.Id,
-            Focus = dto.Focus ?? "strength",
+            // Must be a real FocusType — the quest engine switches on this value,
+            // and an unrecognised string silently falls through to Bulking.
+            Focus = FocusType.IsValid(dto.Focus ?? "") ? dto.Focus! : FocusType.Bulking,
             DaysPerWeek = dto.DaysPerWeek > 0 ? dto.DaysPerWeek : 3,
             Equipment = dto.Equipment ?? "full gym"
         };

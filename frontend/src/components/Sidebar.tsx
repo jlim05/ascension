@@ -92,26 +92,13 @@ export default function Sidebar() {
         <nav className="flex-1 py-4 space-y-1">
           {navItem("/dashboard", "person", "Status")}
           {navItem("/quests", "assignment", "Quest Log")}
+          {navItem("/goals", "flag", "Directive")}
           {navItem("/attributes", "bolt", "Attributes")}
           {navItem("/leaderboard", "military_tech", "Leaderboard")}
         </nav>
 
         {/* Bottom */}
         <div className="px-6 py-4" style={{ borderTop: `1px solid ${sidebarBorder}` }}>
-          <button
-            type="button"
-            className="w-full mb-4 py-3 font-mono-game text-xs uppercase tracking-[0.35em] transition-all"
-            style={{
-              border: `1px solid ${isLight ? "rgba(46,49,255,0.28)" : "rgba(255,255,255,0.55)"}`,
-              color: sidebarText,
-              background: isLight ? "rgba(255,255,255,0.72)" : "rgba(255,255,255,0.02)",
-              boxShadow: isLight ? "inset 0 0 0 1px rgba(46,49,255,0.04)" : "inset 0 0 0 1px rgba(255,255,255,0.05)",
-            }}
-            onMouseEnter={(e) => (e.currentTarget.style.background = isLight ? "rgba(46,49,255,0.06)" : "rgba(255,255,255,0.08)")}
-            onMouseLeave={(e) => (e.currentTarget.style.background = isLight ? "rgba(255,255,255,0.72)" : "rgba(255,255,255,0.02)")}
-          >
-            Open System Store
-          </button>
           {(player?.dayOffTokens ?? 0) > 0 && (
             <div className="flex items-center gap-2 text-xs font-mono-game mb-3" style={{ color: sidebarMuted }}>
               <span>🛡</span>
@@ -137,6 +124,7 @@ export default function Sidebar() {
         {[
           { path: "/dashboard", icon: "person", label: "Status" },
           { path: "/quests", icon: "assignment", label: "Quests" },
+          { path: "/goals", icon: "flag", label: "Goal" },
           { path: "/attributes", icon: "bolt", label: "Stats" },
           { path: "/leaderboard", icon: "military_tech", label: "Ranks" },
         ].map(({ path, icon, label }) => (

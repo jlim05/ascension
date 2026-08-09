@@ -1,8 +1,9 @@
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation, Link } from "react-router-dom";
 import { useAuthStore } from "./store/authStore";
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
 import DashboardPage from "./pages/DashboardPage";
+import GoalsPage from "./pages/GoalsPage";
 import Sidebar from "./components/Sidebar";
 import { useThemeStore } from "./store/themeStore";
 import NotificationToast from "./components/NotificationToast";
@@ -10,12 +11,15 @@ import NotificationToast from "./components/NotificationToast";
 function TopNav() {
   const location = useLocation();
   const { theme, toggleTheme } = useThemeStore();
+  // Subscribing to the store (rather than reading getState() once) means the
+  // avatar initials re-render when the player logs in or changes.
+  const player = useAuthStore((state) => state.player);
   const isLight = theme === "light";
   const tabs = [
     { path: "/dashboard", label: "SYSTEM" },
     { path: "/quests", label: "QUESTS" },
+    { path: "/goals", label: "GOALS" },
     { path: "/leaderboard", label: "LEADERBOARD" },
-    { path: "/market", label: "MARKET" },
   ];
 
   return (
@@ -35,9 +39,12 @@ function TopNav() {
           {tabs.map(({ path, label }) => {
             const active = location.pathname === path;
             return (
-              <a
+              // Link, not <a href> — a raw anchor triggers a full document
+              // reload, which throws away the Zustand store and the live
+              // SignalR connection on every tab click.
+              <Link
                 key={label}
-                href={path}
+                to={path}
                 className="font-mono-game text-[11px] uppercase tracking-[0.35em] pb-1 transition-colors"
                 style={{
                   color: active
@@ -49,7 +56,7 @@ function TopNav() {
                   textShadow: active && !isLight ? "0 0 10px rgba(255,255,255,0.22)" : "none",
                 }}>
                 {label}
-              </a>
+              </Link>
             );
           })}
         </div>
@@ -88,7 +95,7 @@ function TopNav() {
             color: isLight ? "#131b2e" : "var(--text-primary)",
             boxShadow: isLight ? "0 0 18px rgba(46,49,255,0.08)" : "0 0 18px rgba(255,255,255,0.08)",
           }}>
-          {useAuthStore.getState().player?.username?.slice(0, 2).toUpperCase() ?? "??"}
+          {player?.username?.slice(0, 2).toUpperCase() ?? "??"}
         </div>
       </div>
     </header>
@@ -112,8 +119,10 @@ function App() {
             <Route path="/dashboard" element={token ? <DashboardPage section="status" /> : <Navigate to="/login" />} />
             <Route path="/quests" element={token ? <DashboardPage section="quests" /> : <Navigate to="/login" />} />
             <Route path="/attributes" element={token ? <DashboardPage section="attributes" /> : <Navigate to="/login" />} />
+            <Route path="/goals" element={token ? <GoalsPage /> : <Navigate to="/login" />} />
             <Route path="/leaderboard" element={token ? <DashboardPage section="leaderboard" /> : <Navigate to="/login" />} />
-            <Route path="/market" element={token ? <DashboardPage section="leaderboard" /> : <Navigate to="/login" />} />
+            {/* Anything unrecognised goes home rather than rendering a blank shell. */}
+            <Route path="*" element={<Navigate to={token ? "/dashboard" : "/login"} replace />} />
           </Routes>
         </div>
       </div>

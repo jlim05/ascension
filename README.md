@@ -6,8 +6,15 @@
 > daily quest from **the System**, complete your training to earn XP and stats,
 > climb the Hunter Ranks (E → S), and don't fail your quests — the Penalty is real.
 
-**🔗 Live demo:** https://ascension-blush.vercel.app
-**🎥 Video:** _TODO — add public video link before submission_
+## 🔗 Deployment
+
+| What | Link |
+|------|------|
+| **Live app (frontend)** | https://ascension-blush.vercel.app |
+| **API (backend)** | `https://<your-service>.onrender.com` — _replace with your Render URL_ |
+| **Scalar API docs** | `https://<your-service>.onrender.com/scalar/v1` |
+| **Health check** | `https://<your-service>.onrender.com/health` |
+| **🎥 Video** | _TODO — add the public video link before submitting_ |
 
 > Hosted on free tiers — the API and database sleep when idle, so the very first
 > request may take up to a minute. Everything is instant once it wakes.
@@ -54,6 +61,12 @@ principles to keep training motivating:
 - **Live notifications** — quest completions and level-ups arrive in real time via WebSockets.
 - **Dual theme system** — dark System mode and light Solar Ascension mode with fully
   distinct design languages, not just a colour inversion.
+- **Editable directive** — the player's training goal is a first-class, editable
+  resource, so the quest engine adapts the moment your training does.
+
+The UI is responsive: a fixed sidebar on desktop collapses to a bottom tab bar
+on mobile, panels reflow from two columns to one, and the layout was checked at
+375px, 768px and 1440px.
 
 ---
 
@@ -90,14 +103,21 @@ to recover user passwords. This is critical for Ascension because players may
 reuse passwords across other services — protecting them here protects them
 everywhere.
 
-**2. Rate limiting — Fixed window**
-All API endpoints are protected by a fixed-window rate limiter: 30 requests per
-minute per client, with a queue of 5. Excess requests receive a `429 Too Many
-Requests` response. This prevents brute-force attacks on the login endpoint
+**2. Rate limiting — global, IP-partitioned fixed window**
+Every request passes through a *global* rate limiter: 30 requests per minute per
+client IP, queue of 5, excess requests get `429 Too Many Requests` with a
+`Retry-After` header. This prevents brute-force attacks on `/api/auth/login`
 (where an attacker might try thousands of password combinations) and protects
-the quest engine from abuse (e.g., a script repeatedly hitting
-`/api/quests/{id}/complete`). Without rate limiting, both attacks are trivial
-against a public API.
+the quest engine from abuse — a script repeatedly hitting
+`/api/quests/{id}/complete` would otherwise farm unlimited XP.
+
+Two details matter here. It is registered as `GlobalLimiter` rather than a
+*named* policy, because a named policy only applies to endpoints that opt in
+with `[EnableRateLimiting]` — a policy nobody references silently protects
+nothing. And it is partitioned by client IP (read from `X-Forwarded-For`, which
+`UseForwardedHeaders` populates behind Render's proxy) so one abusive client
+cannot exhaust the budget for every other player. SignalR is exempt, since a
+reconnect storm on a long-lived WebSocket would otherwise burn the window.
 
 **3. JWT authentication + authorisation**
 All player-specific endpoints (`/api/quests`, `/api/players`) require a valid
@@ -109,11 +129,51 @@ manipulate other players' quests or stats.
 
 **4. Input validation and sanitisation**
 All incoming data is validated before reaching the database. Identity enforces
-password rules (minimum 6 characters, at least one digit). Entity Framework
-Core uses parameterised queries for all database operations, making SQL
-injection impossible. DTOs (Data Transfer Objects) are used on all endpoints so
-raw entity classes are never exposed to or accepted from the outside world —
-a player cannot, for example, send a request that sets their own level to 99.
+password rules (minimum 6 characters, at least one digit). `GoalDto` carries
+`[Required]`, `[StringLength]` and `[Range(1, 7)]` attributes, and `Focus` is
+checked against the `FocusType` allow-list — an unrecognised focus is rejected
+at the boundary rather than silently falling through to a default in the quest
+engine. Entity Framework Core uses parameterised queries for all database
+operations, making SQL injection impossible. DTOs are used on every endpoint so
+raw entity classes are never exposed to or accepted from the outside world — a
+player cannot, for example, send a request that sets their own level to 99, or
+set `PlayerId` on a goal to reassign someone else's record to themselves.
+
+---
+
+## 🔁 API and CRUD
+
+Full CRUD is implemented on the **Goal** resource — the training directive that
+drives quest generation. The owning player is read from the JWT rather than the
+URL, so a player structurally cannot read or mutate another player's goal.
+
+| Verb | Route | Operation |
+|------|-------|-----------|
+| `POST` | `/api/goals` | **Create** — 409 if a directive already exists |
+| `GET` | `/api/goals` | **Read** — 404 when none is set |
+| `PUT` | `/api/goals` | **Update** |
+| `DELETE` | `/api/goals` | **Delete** — quests fall back to the Bulking focus |
+
+Exercised in the UI at `/goals` ("Directive" in the sidebar), and covered by
+`backend.tests/GoalsControllerTests.cs` and `frontend/src/test/GoalsPage.test.tsx`.
+
+Other endpoints:
+
+| Verb | Route | Purpose |
+|------|-------|---------|
+| `POST` | `/api/auth/register` | Create a Player, StatBlock and starting Goal |
+| `POST` | `/api/auth/login` | Exchange credentials for a JWT |
+| `GET` | `/api/players/me` | Profile, stats, goal, achievements |
+| `GET` | `/api/players/leaderboard` | Top 50 players by level then XP |
+| `GET` | `/api/quests/today` | Today's quest, generating it if needed |
+| `GET` | `/api/quests/weekly-gate` | This week's Gate quest |
+| `POST` | `/api/quests/{id}/complete` | Complete a quest, award XP and stats |
+| `WS` | `/hubs/notifications` | SignalR hub for live notifications |
+
+**Scalar** (not Swagger) serves the interactive documentation at `/scalar/v1`.
+It is mapped in *every* environment, not just Development — the deployed Render
+instance runs as Production, so a Development-only mapping would leave the live
+API undocumented.
 
 ---
 
@@ -137,7 +197,7 @@ cd backend
 dotnet run
 ```
 - API: `http://localhost:5202`
-- Scalar docs: `http://localhost:5202/scalar`
+- Scalar docs: `http://localhost:5202/scalar/v1`
 
 You will need to configure the following user secrets:
 ```bash
@@ -213,14 +273,23 @@ not on disk.
 ---
 
 ## 🧪 Testing
+
 ```bash
-# Backend (xUnit)
-cd ~/Documents/ascension
+# Backend (xUnit) — quest engine + Goals CRUD
 dotnet test Ascension.slnx
 
-# Frontend
-cd frontend && npm run test
+# Frontend (Vitest + Testing Library)
+cd frontend && npm run test:run
 ```
+
+**Backend** — `QuestServiceTests` covers the quest engine: generation per focus,
+idempotency (asking twice on the same day returns the same quest), the streak
+and XP award, the missed-quest penalty, and Weekly Gate timing.
+`GoalsControllerTests` covers all four CRUD verbs plus the ownership boundary —
+that one player's request cannot read, update or delete another player's goal.
+
+**Frontend** — 20 tests across the auth store, theme store, login page, and the
+Goals page (each CRUD verb, the two-step delete confirmation, and error states).
 
 ---
 
